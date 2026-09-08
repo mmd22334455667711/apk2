@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/urlLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="آدرس تست HTTPS در کد MainActivity.java تنظیم شده"
+        android:textSize="14sp"
+        android:paddingBottom="16dp" />
+
+    <Button
+        android:id="@+id/testButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Test HTTPS Connection" />
+
+    <TextView
+        android:id="@+id/resultText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="24dp"
+        android:textSize="16sp"
+        android:text="نتیجه اینجا نمایش داده می‌شود..." />
+
+</LinearLayout>
