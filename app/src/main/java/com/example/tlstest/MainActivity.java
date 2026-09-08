@@ -7,20 +7,23 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import org.conscrypt.Conscrypt;
-
 import java.io.IOException;
-import java.security.Security;
+import java.security.KeyStore;
+import java.util.Collections;
 
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+
+import okhttp3.ConnectionSpec;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.TlsVersion;
 
 public class MainActivity extends Activity {
 
-    // TODO: این آدرس رو با آدرس واقعی تانل خودت (ngrok یا cloudflared) عوض کن
-    // مثال: https://random-words-1234.trycloudflare.com/
-    private static final String TEST_URL = "https://example.com/";
+    private static final String TEST_URL = "https://www.google.com/";
 
     private TextView resultText;
 
@@ -28,14 +31,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        // نصب Conscrypt به عنوان بالاترین اولویت security provider
-        // این کار باعث می‌شه TLS مدرن مستقل از سیستم‌عامل قدیمی کار کنه
-        try {
-            Security.insertProviderAt(Conscrypt.newProvider(), 1);
-        } catch (Throwable t) {
-            // اگه به هر دلیلی conscrypt لود نشد، بازم با موتور پیش‌فرض تلاش می‌کنیم
-        }
 
         resultText = findViewById(R.id.resultText);
         Button testButton = findViewById(R.id.testButton);
@@ -49,27 +44,44 @@ public class MainActivity extends Activity {
         });
     }
 
+    private OkHttpClient buildClient() throws Exception {
+        TrustManagerFactory trustManagerFactory =
+                TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init((KeyStore) null);
+        TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
+        X509TrustManager trustManager = (X509TrustManager) trustManagers[0];
+
+        ConnectionSpec spec = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+                .tlsVersions(TlsVersion.TLS_1_2, TlsVersion.TLS_1_1)
+                .build();
+
+        return new OkHttpClient.Builder()
+                .sslSocketFactory(new TLSSocketFactory(), trustManager)
+                .connectionSpecs(Collections.singletonList(spec))
+                .build();
+    }
+
     private class TestTask extends AsyncTask<Void, Void, String> {
         @Override
         protected String doInBackground(Void... voids) {
             try {
-                OkHttpClient client = new OkHttpClient.Builder().build();
+                OkHttpClient client = buildClient();
                 Request request = new Request.Builder().url(TEST_URL).build();
                 Response response = client.newCall(request).execute();
                 String body = response.body() != null ? response.body().string() : "";
                 boolean ok = response.isSuccessful();
+                int code = response.code();
                 response.close();
                 if (ok) {
-                    return "SUCCESS! کد پاسخ: " + response.code()
+                    return "SUCCESS! کد پاسخ: " + code
                             + "\n\nTLS با موفقیت کار کرد.\n\nبخشی از پاسخ:\n"
                             + body.substring(0, Math.min(200, body.length()));
                 } else {
-                    return "اتصال برقرار شد ولی سرور خطا داد. کد: " + response.code();
+                    return "اتصال برقرار شد ولی سرور خطا داد. کد: " + code;
                 }
             } catch (IOException e) {
                 return "FAILED (خطا در اتصال): " + e.getClass().getSimpleName()
-                        + "\n" + e.getMessage()
-                        + "\n\nاین یعنی TLS روی این گوشی حتی با Conscrypt هم گیر داره؛ باید بریم سراغ راه‌حل HTTP خام.";
+                        + "\n" + e.getMessage();
             } catch (Throwable t) {
                 return "FAILED (خطای غیرمنتظره): " + t.getClass().getSimpleName() + " - " + t.getMessage();
             }
