@@ -7,8 +7,8 @@ android {
 
     defaultConfig {
         applicationId "com.example.tlstest"
-        minSdkVersion 18
-        targetSdkVersion 19
+        minSdkVersion 15
+        targetSdkVersion 15
         versionCode 1
         versionName "1.0"
     }
